@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GraduationCap, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
@@ -20,7 +21,7 @@ const demoAccounts: { role: UserRole; email: string; label: string }[] = [
 ];
 
 const roleRedirects: Record<UserRole, string> = {
-  SUPER_ADMIN: "/super-admin",
+  SUPER_ADMIN: "/admin",
   SCHOOL_ADMIN: "/admin",
   ACCOUNTANT: "/accountant",
   TEACHER: "/teacher",
@@ -32,11 +33,11 @@ export default function LoginPage() {
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -58,22 +59,37 @@ export default function LoginPage() {
     router.push(roleRedirects[user.role]);
   };
 
-  const handleDemoLogin = (email: string) => {
-    setValue("email", email);
-    setValue("password", "demo123");
+  const handleDemoLogin = async (email: string) => {
+    setDemoLoading(email);
+    setServerError(null);
+
+    // Simulate a small delay for visual feedback
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    const user = mockUsers.find((u) => u.email === email);
+    if (!user) {
+      setServerError("Compte de demo introuvable.");
+      setDemoLoading(null);
+      return;
+    }
+
+    login(user);
+    router.push(roleRedirects[user.role]);
   };
 
   return (
     <div className="w-full max-w-md">
       {/* Logo */}
       <div className="flex flex-col items-center mb-8">
-        <div className="w-14 h-14 bg-green-700 rounded-2xl flex items-center justify-center mb-4">
-          <GraduationCap className="h-8 w-8 text-white" aria-hidden="true" />
-        </div>
-        <h1 className="text-2xl font-display font-bold text-white">
+        <Link href="/" className="flex items-center gap-2.5 mb-4 group">
+          <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform">
+            <GraduationCap className="h-7 w-7 text-green-950" aria-hidden="true" />
+          </div>
+        </Link>
+        <h1 className="text-2xl font-serif font-bold text-white">
           Connexion a EduSaaS
         </h1>
-        <p className="text-green-200 text-sm mt-1">
+        <p className="text-green-200/70 text-sm mt-1">
           Gerez votre etablissement en toute simplicite
         </p>
       </div>
@@ -109,7 +125,7 @@ export default function LoginPage() {
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? "email-error" : undefined}
                 className={cn(
-                  "w-full pl-10 pr-3 py-2.5 text-sm rounded-lg border bg-green-50 text-green-950 placeholder:text-green-700/70",
+                  "w-full pl-10 pr-3 py-2.5 text-sm rounded-lg border bg-green-50 text-green-950 placeholder:text-green-700/50",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2",
                   errors.email ? "border-red-400" : "border-green-200"
                 )}
@@ -141,7 +157,7 @@ export default function LoginPage() {
                 aria-invalid={!!errors.password}
                 aria-describedby={errors.password ? "password-error" : undefined}
                 className={cn(
-                  "w-full pl-10 pr-10 py-2.5 text-sm rounded-lg border bg-green-50 text-green-950 placeholder:text-green-700/70",
+                  "w-full pl-10 pr-10 py-2.5 text-sm rounded-lg border bg-green-50 text-green-950 placeholder:text-green-700/50",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2",
                   errors.password ? "border-red-400" : "border-green-200"
                 )}
@@ -180,7 +196,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Demo accounts */}
+        {/* Demo accounts - now directly log in */}
         <div className="mt-6 pt-6 border-t border-green-100">
           <p className="text-xs font-medium text-green-700 mb-3 text-center">
             Comptes de demonstration
@@ -190,12 +206,35 @@ export default function LoginPage() {
               <button
                 key={acc.role}
                 onClick={() => handleDemoLogin(acc.email)}
-                className="px-3 py-1.5 text-xs font-medium rounded-full border border-green-200 text-green-700 hover:bg-green-50 hover:border-green-500 transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2"
+                disabled={demoLoading !== null}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-full border transition-colors min-h-[44px]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2",
+                  demoLoading === acc.email
+                    ? "bg-green-700 text-white border-green-700"
+                    : "border-green-200 text-green-700 hover:bg-green-50 hover:border-green-500",
+                  demoLoading !== null && demoLoading !== acc.email
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                )}
               >
-                {acc.label}
+                {demoLoading === acc.email ? "Connexion..." : acc.label}
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Register link */}
+        <div className="mt-5 pt-5 border-t border-green-100 text-center">
+          <p className="text-sm text-green-700">
+            Pas encore de compte ?{" "}
+            <Link
+              href="/register"
+              className="font-semibold text-green-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2 rounded"
+            >
+              S{"'"}inscrire gratuitement
+            </Link>
+          </p>
         </div>
       </div>
     </div>

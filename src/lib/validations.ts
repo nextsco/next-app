@@ -58,3 +58,26 @@ export const messageSchema = z.object({
 });
 
 export type MessageFormValues = z.infer<typeof messageSchema>;
+
+export const registerSchema = z
+  .object({
+    firstName: z.string().min(1, "Le prenom est obligatoire"),
+    lastName: z.string().min(1, "Le nom est obligatoire"),
+    email: z.string().min(1, "L'adresse email est obligatoire").email("Adresse email invalide"),
+    phone: z.string().min(1, "Le numero de telephone est obligatoire"),
+    schoolName: z.string().min(1, "Le nom de l'etablissement est obligatoire"),
+    city: z.string().min(1, "La ville est obligatoire"),
+    country: z.enum(["SN", "CI", "CM", "GN", "ML", "BF", "TG", "BJ"], {
+      required_error: "Le pays est obligatoire",
+    }),
+    password: z
+      .string()
+      .min(8, "Le mot de passe doit contenir au moins 8 caracteres"),
+    confirmPassword: z.string().min(1, "Veuillez confirmer le mot de passe"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
+  });
+
+export type RegisterFormValues = z.infer<typeof registerSchema>;
